@@ -7,12 +7,12 @@ from sqlalchemy.orm import Session
 from jose import jwt, JWTError
 from datetime import datetime, timedelta, timezone
 
-auth_router = APIRouter(prefix="/auth", tags=["auth"]) #Cria o roteador para as rotas de autenticação
+auth_router = APIRouter(prefix="/auth", tags=["auth"]) # Cria o roteador para as rotas de autenticação
 
 # Criação de token de login
-def criar_token(id_usuario):
-    data_expiracao = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTE) 
-    dic_info = {"user_id": id_usuario, "exp": data_expiracao} # Dicionario de sessão
+def criar_token(id_usuario, duracao_token=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTE)):
+    data_expiracao = datetime.now(timezone.utc) + duracao_token
+    dic_info = {"sub": id_usuario, "exp": data_expiracao} # Dicionario de sessão
     jwt_codificado = jwt.encode(dic_info, SECRET_KEY, ALGORITHM)
     return jwt_codificado
 
@@ -26,6 +26,10 @@ def autenticar_usuario(email, senha, session):
     
     return usuario
 
+# Verificar token
+def verificar_token(token, session: Session = Depends(pegar_sessao)):
+    usuario = session.query(Usuario).filter(usuario.id==1).first()
+    return usuario 
 
 # Decorator (@): atribui uma função diferente a função que está sendo decorada. 
 # Neste caso, a função autenticar() será chamada quando a rota padrão de auth for acessada com o método GET.
@@ -62,7 +66,17 @@ async def login(login_schema: LoginSchema, session: Session=Depends(pegar_sessao
         raise HTTPException(status_code= 400, detail="Usuário não encontrado ou credenciais inválidas")
     else:
         access_token = criar_token(usuario.id)
+        refresh_token = criar_token(usuario.id, duracao_token=timedelta(days=7))
         return {"access_token": access_token,
+                "refresh_token": refresh_token,
                 "token_type": "Bearer"
                 }
     
+@auth_router.get("/refresh")
+async def use_refresh_token(token):
+    usuario = verificar_token(token)
+    access_token = criar_token(usuario.id)
+    return {
+        "access_token": access_token,
+        "token_type": "Bearer"
+        }
