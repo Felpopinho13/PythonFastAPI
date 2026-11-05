@@ -1,11 +1,31 @@
 from fastapi import APIRouter, Depends, HTTPException
 from models import Usuario # Importa o modelo de usuário do arquivo models.py
 from dependencies import pegar_sessao # Importa a função pegar_sessao() do arquivo dependencies.py
-from main import bcrypt_context # Importa o contexto de criptografia de senhas do arquivo main.py
-from schemas import UsuarioSchema # Importa o schema de usuário do arquivo Schemas.py
+from main import bcrypt_context, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTE, SECRET_KEY # Importa o contexto de criptografia de senhas do arquivo main.py
+from schemas import UsuarioSchema, LoginSchema # Importa o schema de usuário do arquivo Schemas.py
 from sqlalchemy.orm import Session
+from jose import jwt, JWTError
+from datetime import datetime, timedelta, timezone
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"]) #Cria o roteador para as rotas de autenticação
+
+# Criação de token de login
+def criar_token(id_usuario):
+    data_expiracao = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTE) 
+    dic_info = {"user_id": id_usuario, "exp": data_expiracao} # Dicionario de sessão
+    jwt_codificado = jwt.encode(dic_info, SECRET_KEY, ALGORITHM)
+    return jwt_codificado
+
+# Criação de autenticação de Usuário
+def autenticar_usuario(email, senha, session):
+    usuario = session.query(Usuario).filter(Usuario.email==email).first()
+    if not usuario:
+        return False
+    elif not bcrypt_context.verify(senha, usuario.senha):
+        return False
+    
+    return usuario
+
 
 # Decorator (@): atribui uma função diferente a função que está sendo decorada. 
 # Neste caso, a função autenticar() será chamada quando a rota padrão de auth for acessada com o método GET.
@@ -34,4 +54,15 @@ async def criar_conta(usuario_schema: UsuarioSchema, session: Session=Depends(pe
         session.commit() # Salva as alterações no banco de dados.
         return {"Mensagem": f"Usuário cadastrado com sucesso {usuario_schema.email}"}
     
+# Login de usuário
+@auth_router.post("/login")
+async def login(login_schema: LoginSchema, session: Session=Depends(pegar_sessao)): 
+    usuario = autenticar_usuario(login_schema.email, login_schema.senha, session)
+    if not usuario:
+        raise HTTPException(status_code= 400, detail="Usuário não encontrado ou credenciais inválidas")
+    else:
+        access_token = criar_token(usuario.id)
+        return {"access_token": access_token,
+                "token_type": "Bearer"
+                }
     
