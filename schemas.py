@@ -12,3 +12,9 @@ class UsuarioSchema(BaseModel):
     # Define a configuração do schema para permitir a criação de instâncias a partir de objetos ORM (Object-Relational Mapping).
     class Config:
         from_attributes = True
+        
+class PedidoSchema(BaseModel):
+    usuario: int
+    
+    class Config:
+        from_attributes = True
