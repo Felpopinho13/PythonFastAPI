@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from models import Usuario # Importa o modelo de usuário do arquivo models.py
-from dependencies import pegar_sessao # Importa a função pegar_sessao() do arquivo dependencies.py
+from dependencies import pegar_sessao, verificar_token # Importa a função pegar_sessao() do arquivo dependencies.py
 from main import bcrypt_context, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTE, SECRET_KEY # Importa o contexto de criptografia de senhas do arquivo main.py
 from schemas import UsuarioSchema, LoginSchema # Importa o schema de usuário do arquivo Schemas.py
 from sqlalchemy.orm import Session
@@ -12,7 +12,7 @@ auth_router = APIRouter(prefix="/auth", tags=["auth"]) # Cria o roteador para as
 # Criação de token de login
 def criar_token(id_usuario, duracao_token=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTE)):
     data_expiracao = datetime.now(timezone.utc) + duracao_token
-    dic_info = {"sub": id_usuario, "exp": data_expiracao} # Dicionario de sessão
+    dic_info = {"sub": str(id_usuario), "exp": data_expiracao} # Dicionario de sessão
     jwt_codificado = jwt.encode(dic_info, SECRET_KEY, ALGORITHM)
     return jwt_codificado
 
@@ -25,11 +25,6 @@ def autenticar_usuario(email, senha, session):
         return False
     
     return usuario
-
-# Verificar token
-def verificar_token(token, session: Session = Depends(pegar_sessao)):
-    usuario = session.query(Usuario).filter(usuario.id==1).first()
-    return usuario 
 
 # Decorator (@): atribui uma função diferente a função que está sendo decorada. 
 # Neste caso, a função autenticar() será chamada quando a rota padrão de auth for acessada com o método GET.
@@ -73,8 +68,7 @@ async def login(login_schema: LoginSchema, session: Session=Depends(pegar_sessao
                 }
     
 @auth_router.get("/refresh")
-async def use_refresh_token(token):
-    usuario = verificar_token(token)
+async def use_refresh_token(usuario: Usuario = Depends(verificar_token)):
     access_token = criar_token(usuario.id)
     return {
         "access_token": access_token,
