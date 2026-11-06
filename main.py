@@ -16,7 +16,7 @@ app = FastAPI()
 
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto") # Cria um contexto de criptografia para senhas
 
-oauth2_schema = OAuth2PasswordBearer(tokenUrl="auth/login") # Com o OAuth2 toda requisição logada, passarão o Token de usuário
+oauth2_schema = OAuth2PasswordBearer(tokenUrl="auth/login-form") # Com o OAuth2 toda requisição logada, passarão o Token de usuário
 
 from auth_routes import auth_router # Importa o arquivo auth_routes.py
 from order_routes import order_router # Importa o arquivo order_routes.py

@@ -6,6 +6,7 @@ from schemas import UsuarioSchema, LoginSchema # Importa o schema de usuário do
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
 from datetime import datetime, timedelta, timezone
+from fastapi.security import OAuth2PasswordRequestForm
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"]) # Cria o roteador para as rotas de autenticação
 
@@ -57,6 +58,20 @@ async def criar_conta(usuario_schema: UsuarioSchema, session: Session=Depends(pe
 @auth_router.post("/login")
 async def login(login_schema: LoginSchema, session: Session=Depends(pegar_sessao)): 
     usuario = autenticar_usuario(login_schema.email, login_schema.senha, session)
+    if not usuario:
+        raise HTTPException(status_code= 400, detail="Usuário não encontrado ou credenciais inválidas")
+    else:
+        access_token = criar_token(usuario.id)
+        refresh_token = criar_token(usuario.id, duracao_token=timedelta(days=7))
+        return {"access_token": access_token,
+                "refresh_token": refresh_token,
+                "token_type": "Bearer"
+                }
+        
+# Login de usuário via formulário de OAuth2 
+@auth_router.post("/login-form")
+async def login_form(dados_formulario: OAuth2PasswordRequestForm = Depends(), session: Session=Depends(pegar_sessao)): 
+    usuario = autenticar_usuario(dados_formulario.username, dados_formulario.password, session)
     if not usuario:
         raise HTTPException(status_code= 400, detail="Usuário não encontrado ou credenciais inválidas")
     else:
