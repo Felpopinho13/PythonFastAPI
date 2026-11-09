@@ -1,5 +1,5 @@
 from sqlalchemy import create_engine, Column, Integer, String, Boolean, Float, ForeignKey # Permite criar o banco de dados
-from sqlalchemy.orm import declarative_base # Permite criar a base do banco de dados
+from sqlalchemy.orm import declarative_base, relationship # Permite criar a base do banco de dados
 from sqlalchemy_utils.types import ChoiceType # Permite criar campos com textos fixos limitados (como status de pedido)
 
 db = create_engine("sqlite:///database/banco.db") # Cria a conexão com o banco de dados
@@ -39,6 +39,7 @@ class Pedido(Base):
     status = Column("status", String) # Pendente, Cancelado, Finalizado
     usuario = Column("usuario", ForeignKey("usuarios.id")) # Chave estrangeira para a tabela de usuários
     preco = Column("preco", Float)
+    itens = relationship("ItemPedido", cascade="all, delete") # Efeito cascata, deleta todos os dados relacionados ao item
     # itens =
     
     def __init__(self, usuario, status="PENDENTE", preco=0):
@@ -47,7 +48,7 @@ class Pedido(Base):
         self.status = status
         
     def calcular_preco(self):
-        self.preco = 10
+        self.preco = sum(item.preco_unitario * item.quantidade for item in self.itens)
         
 # Cria a tabela de ITENSPEDIDO no banco de dados
 class ItemPedido(Base):
