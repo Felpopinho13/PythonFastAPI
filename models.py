@@ -46,6 +46,9 @@ class Pedido(Base):
         self.preco = preco
         self.status = status
         
+    def calcular_preco(self):
+        self.preco = 10
+        
 # Cria a tabela de ITENSPEDIDO no banco de dados
 class ItemPedido(Base):
     __tablename__ = "itens_pedido"
