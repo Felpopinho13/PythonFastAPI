@@ -116,3 +116,10 @@ async def visualizar_pedido(id_pedido: int, session : Session = Depends(pegar_se
         "Quantidade de itens do pedido": len(pedido.itens),
         "pedido" : pedido
     }
+
+@order_router.get("/listar/pedidos-usuario}")
+async def listar_pedidos(session : Session = Depends(pegar_sessao), usuario : Usuario = Depends(verificar_token)):
+    pedidos = session.query(Pedido).filter(Pedido.usuario==usuario.id).all() # Verificar a integridade do sistema caso for muito grande
+    return {
+        "Pedidos" : pedidos 
+    }
